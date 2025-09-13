@@ -3,192 +3,192 @@
 <head>
   <meta charset="UTF-8">
   <title>Restaurante Escolar IE Baldomero Sanín Cano</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f9; }
-    header { background: #00695c; color: white; padding: 15px; text-align: center; font-size: 1.4em; }
-    main { padding: 20px; }
-    section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
-    h2 { color: #00695c; margin-top: 0; }
-    input, button, select { padding: 8px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
-    button { background: #00695c; color: white; border: none; cursor: pointer; }
-    button:hover { background: #004d40; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    table, th, td { border: 1px solid #ddd; }
-    th, td { padding: 8px; text-align: center; }
-    .qr-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
-    .qr-box { text-align: center; font-size: 0.9em; }
-    .stats { display: flex; justify-content: space-around; font-weight: bold; font-size: 1.1em; }
-    video { width: 100%; max-height: 300px; border: 1px solid #ccc; border-radius: 8px; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
+    header { background: #2c3e50; color: #fff; padding: 1rem; text-align: center; font-size: 1.3rem; }
+    main { padding: 1rem; }
+    section { margin-bottom: 2rem; }
+    h2 { border-bottom: 2px solid #ccc; padding-bottom: .3rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: .5rem; text-align: center; }
+    th { background: #eee; }
+    button { margin: .2rem; padding: .4rem .8rem; border: none; background: #3498db; color: #fff; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #2980b9; }
+    #qrCodesContainer { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1rem; }
+    .qr-item { border: 1px solid #ccc; padding: .5rem; text-align: center; background: #fff; }
+    canvas { max-width: 100%; }
+    video { width: 100%; max-width: 400px; border: 2px solid #333; margin-top: 1rem; }
+    #dashboard { display: flex; gap: 2rem; flex-wrap: wrap; }
+    .card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,.1); flex: 1; min-width: 200px; }
+    @media (max-width: 600px) {
+      table, thead, tbody, th, td, tr { display: block; }
+      td { border: none; border-bottom: 1px solid #ccc; }
+    }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
-<header>Restaurante Escolar IE Baldomero Sanín Cano</header>
-<main>
-  <!-- Carga -->
-  <section>
-    <h2>Cargar Estudiantes (CSV)</h2>
-    <input type="file" id="csvFile" accept=".csv">
-    <button id="importBtn">Cargar</button>
-    <p><b>Formato:</b> name,grade</p>
-  </section>
+  <header>Restaurante Escolar IE Baldomero Sanín Cano</header>
+  <main>
+    <section>
+      <h2>Cargar estudiantes (CSV)</h2>
+      <input type="file" id="csvFile" accept=".csv">
+    </section>
 
-  <!-- Filtro -->
-  <section>
-    <h2>Seleccionar Grupo</h2>
-    <select id="groupSelect">
-      <option value="all">Todos</option>
-    </select>
-  </section>
+    <section>
+      <h2>Gestión de Estudiantes</h2>
+      <table>
+        <thead>
+          <tr><th>Nombre</th><th>Grado</th><th>QR</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="studentsTable"></tbody>
+      </table>
+    </section>
 
-  <!-- Dashboard -->
-  <section>
-    <h2>Dashboard</h2>
-    <div class="stats">
-      <div>Total estudiantes: <span id="totalStudents">0</span></div>
-      <div>Asistencias de hoy: <span id="todayAttendance">0</span></div>
-    </div>
-  </section>
+    <section>
+      <h2>Códigos QR</h2>
+      <button onclick="printQRCodes()">Imprimir QR</button>
+      <div id="qrCodesContainer"></div>
+    </section>
 
-  <!-- Escáner -->
-  <section>
-    <h2>Escáner de QR</h2>
-    <div id="reader"></div>
-    <p id="scanResult"></p>
-  </section>
+    <section>
+      <h2>Escáner de QR</h2>
+      <button id="startScanner">Iniciar escáner</button>
+      <video id="video" autoplay></video>
+      <canvas id="qrCanvas" hidden></canvas>
+      <p id="scanResult"></p>
+    </section>
 
-  <!-- Lista -->
-  <section>
-    <h2>Gestión de Estudiantes</h2>
-    <table>
-      <thead>
-        <tr><th>Nombre</th><th>Grado</th><th>Acciones</th></tr>
-      </thead>
-      <tbody id="studentTable"></tbody>
-    </table>
-  </section>
+    <section>
+      <h2>Dashboard</h2>
+      <div id="dashboard">
+        <div class="card">
+          <h3>Total estudiantes</h3>
+          <p id="totalStudents">0</p>
+        </div>
+        <div class="card">
+          <h3>Asistencias registradas</h3>
+          <p id="totalAttendance">0</p>
+        </div>
+      </div>
+    </section>
+  </main>
 
-  <!-- QR -->
-  <section>
-    <h2>Códigos QR de Estudiantes</h2>
-    <button onclick="printQRCodes()">Imprimir QR</button>
-    <div class="qr-container" id="qrContainer"></div>
-  </section>
-</main>
+  <!-- QR generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <!-- QR scanner -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
 
-<script>
-const uid=()=> '_' + Math.random().toString(36).substr(2,9);
-const speak=(t)=>{const u=new SpeechSynthesisUtterance(t);u.lang="es-ES";speechSynthesis.speak(u);};
-const today=()=>new Date().toISOString().split("T")[0];
-const readStudents=()=>JSON.parse(localStorage.getItem("students")||"[]");
-const writeStudents=(arr)=>localStorage.setItem("students",JSON.stringify(arr));
-const readAttendance=()=>JSON.parse(localStorage.getItem("attendance")||"{}");
-const writeAttendance=(a)=>localStorage.setItem("attendance",JSON.stringify(a));
-let currentGroup="all";
+  <script>
+    let students = [];
+    let attendance = new Set();
 
-/* Render */
-function renderAll(){
-  const arr=readStudents();
-  const filtered= currentGroup==="all" ? arr : arr.filter(s=>s.grade===currentGroup);
-  // tabla
-  const tbody=document.getElementById("studentTable");
-  tbody.innerHTML="";
-  filtered.forEach(s=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${s.name}</td><td>${s.grade}</td>
-      <td><button onclick="removeStudent('${s.id}')">Eliminar</button></td>`;
-    tbody.appendChild(tr);
-  });
-  // qr
-  const qrC=document.getElementById("qrContainer");
-  qrC.innerHTML="";
-  filtered.forEach(s=>{
-    const div=document.createElement("div");
-    div.className="qr-box";
-    const qr=document.createElement("div");
-    new QRCode(qr,{text:s.id,width:100,height:100});
-    div.appendChild(qr);
-    div.appendChild(document.createTextNode(s.name));
-    qrC.appendChild(div);
-  });
-  // stats
-  document.getElementById("totalStudents").textContent=filtered.length;
-  const att=readAttendance()[today()]||[];
-  document.getElementById("todayAttendance").textContent=att.filter(id=>filtered.find(s=>s.id===id)).length;
-  // grupos en selector
-  const grades=[...new Set(arr.map(s=>s.grade))];
-  const select=document.getElementById("groupSelect");
-  select.innerHTML='<option value="all">Todos</option>';
-  grades.forEach(g=>{
-    const opt=document.createElement("option");
-    opt.value=g; opt.textContent=g;
-    if(g===currentGroup) opt.selected=true;
-    select.appendChild(opt);
-  });
-}
-
-/* CSV */
-document.getElementById("importBtn").addEventListener("click",()=>{
-  const f=document.getElementById("csvFile").files[0];
-  if(!f){alert("Seleccione un archivo CSV");return;}
-  Papa.parse(f,{header:true,skipEmptyLines:true,complete(r){
-    let arr=readStudents(); let added=0;
-    r.data.forEach(row=>{
-      const name=(row.name||row.Nombre||"").trim();
-      const grade=(row.grade||row.Grado||"").trim();
-      if(name){arr.push({id:uid(),name,grade});added++;}
+    // Cargar CSV
+    document.getElementById('csvFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+        students = lines.map((line, index) => {
+          const [nombre, grado] = line.split(",");
+          return { id: index+1, nombre: nombre.trim(), grado: grado.trim() };
+        });
+        renderStudents();
+      };
+      reader.readAsText(file);
     });
-    writeStudents(arr);
-    alert(`Se añadieron ${added} estudiantes`);
-    renderAll();
-  }});
-});
 
-/* Selección grupo */
-document.getElementById("groupSelect").addEventListener("change",e=>{
-  currentGroup=e.target.value;
-  renderAll();
-});
+    // Renderizar estudiantes y QR
+    function renderStudents() {
+      const tbody = document.getElementById('studentsTable');
+      tbody.innerHTML = "";
+      const qrContainer = document.getElementById('qrCodesContainer');
+      qrContainer.innerHTML = "";
 
-/* Eliminar */
-function removeStudent(id){
-  let arr=readStudents().filter(s=>s.id!==id);
-  writeStudents(arr); renderAll();
-}
+      students.forEach(st => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td contenteditable="true">${st.nombre}</td>
+          <td contenteditable="true">${st.grado}</td>
+          <td><canvas id="qr-${st.id}"></canvas></td>
+          <td><button onclick="deleteStudent(${st.id})">Eliminar</button></td>
+        `;
+        tbody.appendChild(tr);
 
-/* Imprimir */
-function printQRCodes(){
-  const c=document.getElementById("qrContainer").innerHTML;
-  const w=window.open("","","width=800,height=600");
-  w.document.write("<html><head><title>Imprimir QR</title></head><body>"+c+"</body></html>");
-  w.print(); w.close();
-}
+        // Generar QR
+        const qr = new QRious({
+          element: document.getElementById(`qr-${st.id}`),
+          value: JSON.stringify(st),
+          size: 100
+        });
 
-/* Escáner */
-function startScanner(){
-  const html5QrCode=new Html5Qrcode("reader");
-  html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},
-    (decoded)=>{
-      const arr=readStudents();
-      const s=arr.find(st=>st.id===decoded);
-      if(s && (currentGroup==="all" || s.grade===currentGroup)){
-        const a=readAttendance();
-        if(!a[today()]) a[today()]=[];
-        if(!a[today()].includes(s.id)){
-          a[today()].push(s.id);
-          writeAttendance(a);
-          renderAll();
-          document.getElementById("scanResult").textContent=`Asistencia: ${s.name} (${s.grade})`;
-          speak("estudiante registrado");
+        // Para impresión
+        const div = document.createElement('div');
+        div.className = "qr-item";
+        div.innerHTML = `<p>${st.nombre} - ${st.grado}</p><img src="${qr.toDataURL()}" />`;
+        qrContainer.appendChild(div);
+      });
+
+      updateDashboard();
+    }
+
+    function deleteStudent(id) {
+      students = students.filter(s => s.id !== id);
+      renderStudents();
+    }
+
+    function printQRCodes() {
+      const content = document.getElementById('qrCodesContainer').innerHTML;
+      const w = window.open("", "", "width=800,height=600");
+      w.document.write("<html><head><title>Imprimir QR</title></head><body>" + content + "</body></html>");
+      w.document.close();
+      w.print();
+    }
+
+    // Dashboard
+    function updateDashboard() {
+      document.getElementById('totalStudents').textContent = students.length;
+      document.getElementById('totalAttendance').textContent = attendance.size;
+    }
+
+    // Escáner
+    document.getElementById('startScanner').addEventListener('click', startScanner);
+
+    function startScanner() {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('qrCanvas');
+      const ctx = canvas.getContext('2d');
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(stream => {
+          video.srcObject = stream;
+          video.setAttribute("playsinline", true);
+          video.play();
+          requestAnimationFrame(tick);
+        })
+        .catch(err => {
+          alert("Error al iniciar cámara: " + err);
+        });
+
+      function tick() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+          if (code) {
+            document.getElementById('scanResult').textContent = "Estudiante detectado: " + code.data;
+            attendance.add(code.data);
+            updateDashboard();
+          }
         }
+        requestAnimationFrame(tick);
       }
-    },(err)=>{}).catch(e=>alert("Error al iniciar escáner: "+e));
-}
-startScanner();
-renderAll();
-</script>
+    }
+  </script>
 </body>
 </html>
+
+
