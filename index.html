@@ -21,10 +21,7 @@
     video { width: 100%; max-width: 400px; border: 2px solid #333; margin-top: 1rem; }
     #dashboard { display: flex; gap: 2rem; flex-wrap: wrap; }
     .card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,.1); flex: 1; min-width: 200px; }
-    @media (max-width: 600px) {
-      table, thead, tbody, th, td, tr { display: block; }
-      td { border: none; border-bottom: 1px solid #ccc; }
-    }
+    #scanResult { font-weight: bold; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -116,11 +113,11 @@
         `;
         tbody.appendChild(tr);
 
-        // Generar QR
+        // Generar QR más grande
         const qr = new QRious({
           element: document.getElementById(`qr-${st.id}`),
           value: JSON.stringify(st),
-          size: 100
+          size: 200
         });
 
         // Para impresión
@@ -179,9 +176,24 @@
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
           if (code) {
+            ctx.beginPath();
+            ctx.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
+            ctx.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
+            ctx.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
+            ctx.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
+            ctx.closePath();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "green";
+            ctx.stroke();
+
             document.getElementById('scanResult').textContent = "Estudiante detectado: " + code.data;
-            attendance.add(code.data);
-            updateDashboard();
+            if (!attendance.has(code.data)) {
+              attendance.add(code.data);
+              updateDashboard();
+              // Voz
+              const msg = new SpeechSynthesisUtterance("Estudiante registrado");
+              window.speechSynthesis.speak(msg);
+            }
           }
         }
         requestAnimationFrame(tick);
@@ -190,5 +202,3 @@
   </script>
 </body>
 </html>
-
-
