@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Restaurante Escolar IE Baldomero Sanín Cano</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f9; }
+    header { background: #00695c; color: white; padding: 15px; text-align: center; font-size: 1.4em; }
+    main { padding: 20px; }
+    section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+    h2 { color: #00695c; margin-top: 0; }
+    input, button, select { padding: 8px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
+    button { background: #00695c; color: white; border: none; cursor: pointer; }
+    button:hover { background: #004d40; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table, th, td { border: 1px solid #ddd; }
+    th, td { padding: 8px; text-align: center; }
+    .qr-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
+    .qr-box { text-align: center; font-size: 0.9em; }
+    .stats { display: flex; justify-content: space-around; font-weight: bold; font-size: 1.1em; }
+    video { width: 100%; max-height: 300px; border: 1px solid #ccc; border-radius: 8px; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+</head>
+<body>
+<header>Restaurante Escolar IE Baldomero Sanín Cano</header>
+<main>
+  <!-- Carga -->
+  <section>
+    <h2>Cargar Estudiantes (CSV)</h2>
+    <input type="file" id="csvFile" accept=".csv">
+    <button id="importBtn">Cargar</button>
+    <p><b>Formato:</b> name,grade</p>
+  </section>
+
+  <!-- Filtro -->
+  <section>
+    <h2>Seleccionar Grupo</h2>
+    <select id="groupSelect">
+      <option value="all">Todos</option>
+    </select>
+  </section>
+
+  <!-- Dashboard -->
+  <section>
+    <h2>Dashboard</h2>
+    <div class="stats">
+      <div>Total estudiantes: <span id="totalStudents">0</span></div>
+      <div>Asistencias de hoy: <span id="todayAttendance">0</span></div>
+    </div>
+  </section>
+
+  <!-- Escáner -->
+  <section>
+    <h2>Escáner de QR</h2>
+    <div id="reader"></div>
+    <p id="scanResult"></p>
+  </section>
+
+  <!-- Lista -->
+  <section>
+    <h2>Gestión de Estudiantes</h2>
+    <table>
+      <thead>
+        <tr><th>Nombre</th><th>Grado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody id="studentTable"></tbody>
+    </table>
+  </section>
+
+  <!-- QR -->
+  <section>
+    <h2>Códigos QR de Estudiantes</h2>
+    <button onclick="printQRCodes()">Imprimir QR</button>
+    <div class="qr-container" id="qrContainer"></div>
+  </section>
+</main>
+
+<script>
+const uid=()=> '_' + Math.random().toString(36).substr(2,9);
+const speak=(t)=>{const u=new SpeechSynthesisUtterance(t);u.lang="es-ES";speechSynthesis.speak(u);};
+const today=()=>new Date().toISOString().split("T")[0];
+const readStudents=()=>JSON.parse(localStorage.getItem("students")||"[]");
+const writeStudents=(arr)=>localStorage.setItem("students",JSON.stringify(arr));
+const readAttendance=()=>JSON.parse(localStorage.getItem("attendance")||"{}");
+const writeAttendance=(a)=>localStorage.setItem("attendance",JSON.stringify(a));
+let currentGroup="all";
+
+/* Render */
+function renderAll(){
+  const arr=readStudents();
+  const filtered= currentGroup==="all" ? arr : arr.filter(s=>s.grade===currentGroup);
+  // tabla
+  const tbody=document.getElementById("studentTable");
+  tbody.innerHTML="";
+  filtered.forEach(s=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${s.name}</td><td>${s.grade}</td>
+      <td><button onclick="removeStudent('${s.id}')">Eliminar</button></td>`;
+    tbody.appendChild(tr);
+  });
+  // qr
+  const qrC=document.getElementById("qrContainer");
+  qrC.innerHTML="";
+  filtered.forEach(s=>{
+    const div=document.createElement("div");
+    div.className="qr-box";
+    const qr=document.createElement("div");
+    new QRCode(qr,{text:s.id,width:100,height:100});
+    div.appendChild(qr);
+    div.appendChild(document.createTextNode(s.name));
+    qrC.appendChild(div);
+  });
+  // stats
+  document.getElementById("totalStudents").textContent=filtered.length;
+  const att=readAttendance()[today()]||[];
+  document.getElementById("todayAttendance").textContent=att.filter(id=>filtered.find(s=>s.id===id)).length;
+  // grupos en selector
+  const grades=[...new Set(arr.map(s=>s.grade))];
+  const select=document.getElementById("groupSelect");
+  select.innerHTML='<option value="all">Todos</option>';
+  grades.forEach(g=>{
+    const opt=document.createElement("option");
+    opt.value=g; opt.textContent=g;
+    if(g===currentGroup) opt.selected=true;
+    select.appendChild(opt);
+  });
+}
+
+/* CSV */
+document.getElementById("importBtn").addEventListener("click",()=>{
+  const f=document.getElementById("csvFile").files[0];
+  if(!f){alert("Seleccione un archivo CSV");return;}
+  Papa.parse(f,{header:true,skipEmptyLines:true,complete(r){
+    let arr=readStudents(); let added=0;
+    r.data.forEach(row=>{
+      const name=(row.name||row.Nombre||"").trim();
+      const grade=(row.grade||row.Grado||"").trim();
+      if(name){arr.push({id:uid(),name,grade});added++;}
+    });
+    writeStudents(arr);
+    alert(`Se añadieron ${added} estudiantes`);
+    renderAll();
+  }});
+});
+
+/* Selección grupo */
+document.getElementById("groupSelect").addEventListener("change",e=>{
+  currentGroup=e.target.value;
+  renderAll();
+});
+
+/* Eliminar */
+function removeStudent(id){
+  let arr=readStudents().filter(s=>s.id!==id);
+  writeStudents(arr); renderAll();
+}
+
+/* Imprimir */
+function printQRCodes(){
+  const c=document.getElementById("qrContainer").innerHTML;
+  const w=window.open("","","width=800,height=600");
+  w.document.write("<html><head><title>Imprimir QR</title></head><body>"+c+"</body></html>");
+  w.print(); w.close();
+}
+
+/* Escáner */
+function startScanner(){
+  const html5QrCode=new Html5Qrcode("reader");
+  html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:250},
+    (decoded)=>{
+      const arr=readStudents();
+      const s=arr.find(st=>st.id===decoded);
+      if(s && (currentGroup==="all" || s.grade===currentGroup)){
+        const a=readAttendance();
+        if(!a[today()]) a[today()]=[];
+        if(!a[today()].includes(s.id)){
+          a[today()].push(s.id);
+          writeAttendance(a);
+          renderAll();
+          document.getElementById("scanResult").textContent=`Asistencia: ${s.name} (${s.grade})`;
+          speak("estudiante registrado");
+        }
+      }
+    },(err)=>{}).catch(e=>alert("Error al iniciar escáner: "+e));
+}
+startScanner();
+renderAll();
+</script>
+</body>
+</html>
